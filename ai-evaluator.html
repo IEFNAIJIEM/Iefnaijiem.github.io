@@ -1,0 +1,968 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>AI 意向评估器 | 精简级联硬件核算</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- 中文字体与圆润舒适字体 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+
+  <style>
+    /* 专属极简浅灰调色盘 */
+    :root {
+      --dtd-bg: #f5f6f8;
+      --dtd-card: #ffffff;
+      --dtd-ink: #2b2d31;
+      --dtd-border: rgba(0, 0, 0, 0.08);
+    }
+
+    body {
+      background-color: var(--dtd-bg);
+      color: var(--dtd-ink);
+      font-family: 'Fredoka', 'Noto Sans SC', sans-serif;
+      -webkit-font-smoothing: antialiased;
+      user-select: none;
+    }
+
+    /* 手机真机容器 */
+    .dtd-phone {
+      max-width: 420px;
+      min-height: 840px;
+      background-color: var(--dtd-bg);
+      border-radius: 44px;
+      box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.07);
+      overflow: hidden;
+    }
+
+    /* 纯净白卡片 */
+    .dtd-card {
+      background-color: var(--dtd-card);
+      border: 1px solid var(--dtd-border);
+      border-radius: 24px;
+      box-shadow: 0 2px 8px 0 rgba(0, 0, 0, 0.02);
+      transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    /* 手绘按压回弹感按钮 */
+    .dtd-btn {
+      background-color: #ffffff;
+      border: 1px solid var(--dtd-border);
+      border-radius: 14px;
+      color: #33363b;
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+      cursor: pointer;
+    }
+
+    .dtd-btn:hover {
+      transform: translateY(-2px);
+      border-color: rgba(0, 0, 0, 0.2);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    }
+
+    .dtd-btn:active {
+      transform: scale(0.97);
+    }
+
+    .dtd-btn.active {
+      background-color: #2b2d31;
+      color: #ffffff;
+      border-color: #2b2d31;
+      box-shadow: 0 6px 18px rgba(43, 45, 49, 0.18);
+    }
+
+    .dtd-btn.active .dtd-sub {
+      color: #cfd2d8;
+    }
+
+    /* 胶囊选择器 */
+    .dtd-select-pill {
+      background-color: #f8f9fa;
+      border: 1px solid var(--dtd-border);
+      border-radius: 16px;
+      color: #2b2d31;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .dtd-select-pill:focus {
+      background-color: #ffffff;
+      border-color: #2b2d31;
+    }
+
+    /* 隐藏滚动条 */
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-0 sm:p-6">
+
+  <!-- 应用主体容器 (去除了所有多余顶部和底部) -->
+  <div class="dtd-phone w-full flex flex-col relative py-8 px-5">
+
+    <!-- 主滚动视图 -->
+    <main class="flex-1 overflow-y-auto no-scrollbar space-y-4">
+      
+      <!-- 问候标题 -->
+      <div class="pt-2 pb-1 text-center space-y-1">
+        <h2 class="text-xl font-bold tracking-tight text-[#2b2d31]">
+          今天想用 AI 陪伴你做什么？
+        </h2>
+        <p class="text-xs text-slate-400">
+          轻触任务与设备，严苛测算真实可用性与显存红线
+        </p>
+      </div>
+
+      <!-- 第一步：六大任务卡片 (纯方形图标) -->
+      <section class="space-y-2">
+        <div class="grid grid-cols-2 gap-2.5" id="intentGrid">
+          
+          <!-- 1. 对话写作 -->
+          <button type="button" data-val="chat" class="dtd-btn active p-3 flex items-center gap-3 text-left">
+            <div class="w-9 h-9 rounded-none bg-amber-50 border border-slate-200/60 flex items-center justify-center text-lg shrink-0">
+              ☕
+            </div>
+            <div>
+              <div class="text-xs font-bold">对话与文案写作</div>
+              <div class="text-[10px] dtd-sub text-slate-400 mt-0.5">文本大模型 · 日常陪伴</div>
+            </div>
+          </button>
+
+          <!-- 2. SD 画图 -->
+          <button type="button" data-val="draw" class="dtd-btn p-3 flex items-center gap-3 text-left">
+            <div class="w-9 h-9 rounded-none bg-rose-50 border border-slate-200/60 flex items-center justify-center text-lg shrink-0">
+              🎨
+            </div>
+            <div>
+              <div class="text-xs font-bold">绘画与创意生图</div>
+              <div class="text-[10px] dtd-sub text-slate-400 mt-0.5">SD / Flux / 图像生成</div>
+            </div>
+          </button>
+
+          <!-- 3. 写代码 -->
+          <button type="button" data-val="code" class="dtd-btn p-3 flex items-center gap-3 text-left">
+            <div class="w-9 h-9 rounded-none bg-blue-50 border border-slate-200/60 flex items-center justify-center text-lg shrink-0">
+              🌱
+            </div>
+            <div>
+              <div class="text-xs font-bold">辅助编程 / Agent</div>
+              <div class="text-[10px] dtd-sub text-slate-400 mt-0.5">代码补全 · 逻辑构思</div>
+            </div>
+          </button>
+
+          <!-- 4. 个人知识库 -->
+          <button type="button" data-val="kb" class="dtd-btn p-3 flex items-center gap-3 text-left">
+            <div class="w-9 h-9 rounded-none bg-emerald-50 border border-slate-200/60 flex items-center justify-center text-lg shrink-0">
+              📖
+            </div>
+            <div>
+              <div class="text-xs font-bold">本地个人知识库</div>
+              <div class="text-[10px] dtd-sub text-slate-400 mt-0.5">文档问答 · 私有隐私</div>
+            </div>
+          </button>
+
+          <!-- 5. 声音与音乐 -->
+          <button type="button" data-val="audio" class="dtd-btn p-3 flex items-center gap-3 text-left">
+            <div class="w-9 h-9 rounded-none bg-purple-50 border border-slate-200/60 flex items-center justify-center text-lg shrink-0">
+              🎵
+            </div>
+            <div>
+              <div class="text-xs font-bold">声音克隆 / 音乐</div>
+              <div class="text-[10px] dtd-sub text-slate-400 mt-0.5">TTS 音频 · 旋律创作</div>
+            </div>
+          </button>
+
+          <!-- 6. AI 视频 -->
+          <button type="button" data-val="video" class="dtd-btn p-3 flex items-center gap-3 text-left">
+            <div class="w-9 h-9 rounded-none bg-indigo-50 border border-slate-200/60 flex items-center justify-center text-lg shrink-0">
+              🪟
+            </div>
+            <div>
+              <div class="text-xs font-bold">短视频与动图生成</div>
+              <div class="text-[10px] dtd-sub text-slate-400 mt-0.5">文生视频 · 动态运镜</div>
+            </div>
+          </button>
+
+        </div>
+      </section>
+
+      <!-- 第二步：精简后紧密联动的硬件选择面板 (移除了不必要的快捷胶囊与虚设分类) -->
+      <section class="dtd-card p-4 space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+            <span class="text-sm">💻</span> 你的设备硬件
+          </span>
+          <span class="text-[10px] text-emerald-600 font-medium">● 品牌系列联动</span>
+        </div>
+
+        <div class="space-y-2.5 text-xs pt-0.5">
+          
+          <!-- 1. 显卡芯片架构 (NVIDIA / Apple / AMD / 核显) -->
+          <div>
+            <label class="block text-[10px] text-slate-400 font-medium mb-1">显卡 (GPU) 架构品牌</label>
+            <select id="gpuSelect" onchange="onGpuChange()" class="dtd-select-pill w-full px-3 py-2 text-xs">
+              <option value="nvidia">NVIDIA (RTX 独显 · 完整 CUDA 矩阵加速)</option>
+              <option value="mac">Apple Silicon (M系列芯片 · 统一显存架构)</option>
+              <option value="amd">AMD 独立显卡 (Radeon RX 系列 · ROCm/DirectML)</option>
+              <option value="cpu">集成核显 / 纯 CPU (Intel Iris / AMD Radeon Graphics)</option>
+            </select>
+          </div>
+
+          <!-- 2. 联动型号/系列及显存 (根据上面品牌动态刷新选项) -->
+          <div>
+            <label class="block text-[10px] text-slate-400 font-medium mb-1" id="vramLabel">对应型号系列与显存</label>
+            <select id="vramSelect" onchange="triggerUpdate()" class="dtd-select-pill w-full px-3 py-2 text-xs">
+              <!-- 动态灌入选项 -->
+            </select>
+          </div>
+
+          <!-- 3. 系统内存 RAM -->
+          <div>
+            <label class="block text-[10px] text-slate-400 font-medium mb-1">运行内存 (RAM 容量)</label>
+            <select id="ramSelect" onchange="triggerUpdate()" class="dtd-select-pill w-full px-3 py-2 text-xs">
+              <option value="8">8 GB (紧凑吃紧)</option>
+              <option value="16" selected>16 GB (主流基准)</option>
+              <option value="32">32 GB (宽松裕量)</option>
+              <option value="64">64 GB 或更高 (工作站极客档)</option>
+            </select>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- 第三步：评估方案卡片 (严苛真实判定) -->
+      <section class="space-y-3 pb-2">
+        <div class="dtd-card p-5 space-y-4">
+          
+          <!-- 状态头与严格评分仪表 -->
+          <div class="flex items-start justify-between">
+            <div class="space-y-0.5">
+              <span class="text-[10px] font-bold tracking-wider uppercase text-slate-400" id="resTag">
+                EVALUATION RESULT
+              </span>
+              <h3 class="text-base font-bold text-slate-900" id="resTitle">
+                正在调制最适方案...
+              </h3>
+            </div>
+
+            <!-- 严格的健康度/可行性百分比及等级徽章 -->
+            <div class="text-right flex flex-col items-end">
+              <div id="resBadge" class="px-2.5 py-0.5 rounded-md text-[11px] font-bold border">
+                -
+              </div>
+              <span class="text-[10px] text-slate-400 mt-1 font-mono" id="resScore">可行性: --%</span>
+            </div>
+          </div>
+
+          <!-- 说明文 -->
+          <p class="text-xs text-slate-500 leading-relaxed font-normal" id="resDesc">
+            正在根据你的设备实时评估...
+          </p>
+
+          <!-- 4 维严苛指标卡 -->
+          <div class="grid grid-cols-4 gap-1.5 p-2 rounded-2xl bg-slate-50 border border-slate-100 text-center">
+            <div class="p-1">
+              <div class="text-[9px] text-slate-400">显存负荷</div>
+              <div class="text-xs font-bold text-slate-800 mt-0.5" id="metricVram">-</div>
+            </div>
+            <div class="p-1 border-l border-slate-200/60">
+              <div class="text-[9px] text-slate-400">预期速度</div>
+              <div class="text-xs font-bold text-slate-800 mt-0.5" id="metricSpeed">-</div>
+            </div>
+            <div class="p-1 border-l border-slate-200/60">
+              <div class="text-[9px] text-slate-400">发热预估</div>
+              <div class="text-xs font-bold text-slate-800 mt-0.5" id="metricTemp">-</div>
+            </div>
+            <div class="p-1 border-l border-slate-200/60">
+              <div class="text-[9px] text-slate-400">离线体验</div>
+              <div class="text-xs font-bold text-slate-800 mt-0.5" id="metricOffline">-</div>
+            </div>
+          </div>
+
+          <!-- 推荐双岛：推荐软件 & 推荐模型尺寸 -->
+          <div class="grid grid-cols-2 gap-2.5 pt-1 text-xs">
+            
+            <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
+              <div class="text-[10px] text-slate-400 font-bold uppercase flex items-center gap-1">
+                <span>🧰</span> 最佳软件架构
+              </div>
+              <div class="font-bold text-slate-800 text-xs" id="resTool">-</div>
+              <div class="text-[10px] text-slate-500 leading-tight" id="resToolSub">-</div>
+            </div>
+
+            <div class="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 space-y-1">
+              <div class="text-[10px] text-slate-400 font-bold uppercase flex items-center gap-1">
+                <span>📦</span> 严选模型版本与量化
+              </div>
+              <div class="font-bold text-slate-800 text-xs" id="resModel">-</div>
+              <div class="text-[10px] text-slate-500 leading-tight" id="resModelSub">-</div>
+            </div>
+
+          </div>
+
+          <!-- 严格的避坑与风险提示 -->
+          <div id="riskContainer" class="p-3.5 rounded-2xl text-xs flex items-start gap-2.5">
+            <span class="text-base leading-none" id="riskIcon">💡</span>
+            <div class="space-y-0.5">
+              <div class="font-bold text-[11px]" id="riskTitle">严格评估风向标</div>
+              <div class="text-[10px] leading-relaxed font-normal" id="resTip">
+                -
+              </div>
+            </div>
+          </div>
+
+          <!-- 免折腾平替 -->
+          <div class="text-[11px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-100">
+            <span>最佳平替通道:</span>
+            <span class="font-medium text-slate-700" id="resAlt">-</span>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+
+  </div>
+
+  <script>
+    let activeIntent = 'chat';
+
+    // 显卡品牌与系列型号、显存的联动数据字典
+    const GPU_MODELS = {
+      nvidia: [
+        { label: 'RTX 3060 / 4060 / 4060Ti (8GB 显存 · 主流甜点)', value: 8 },
+        { label: 'RTX 3060 12G / 4070 / 4070S (12GB 显存 · 进阶平衡)', value: 12 },
+        { label: 'RTX 4070Ti Super / 4080 (16GB 显存 · 创作基准)', value: 16 },
+        { label: 'RTX 3090 / 4090 / 4090D (24GB 满血显存 · 旗舰天花板)', value: 24 },
+        { label: 'GTX 1660 / RTX 2060 / 3050 (6GB 显存 · 入门门槛)', value: 6 },
+        { label: 'GTX 1050Ti / 1650 (4GB 显存 · 老旧淘汰)', value: 4 }
+      ],
+      mac: [
+        { label: 'Apple M1/M2/M3/M4 标准版 (8GB~16GB 统一内存)', value: 'mac_standard' },
+        { label: 'Apple M Pro / Max 系列 (24GB~36GB 统一大显存)', value: 'mac_pro' },
+        { label: 'Apple M Ultra / 工作站 (64GB~128GB+ 极客级共享)', value: 'mac_ultra' }
+      ],
+      amd: [
+        { label: 'Radeon RX 6600 / 7600 (8GB 显存)', value: 8 },
+        { label: 'Radeon RX 6700XT / 7700XT (12GB 显存)', value: 12 },
+        { label: 'Radeon RX 6800XT / 7800XT (16GB 显存)', value: 16 },
+        { label: 'Radeon RX 7900XTX (24GB 大显存)', value: 24 }
+      ],
+      cpu: [
+        { label: '纯核显 / 无独显 (共享系统物理内存)', value: 0 }
+      ]
+    };
+
+    // 意图单选
+    const intentBtns = document.querySelectorAll('#intentGrid .dtd-btn');
+    intentBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        intentBtns.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeIntent = btn.getAttribute('data-val');
+        triggerUpdate();
+      });
+    });
+
+    // 当显卡品牌切换时，联动刷新型号与显存下拉选项
+    function onGpuChange() {
+      const gpu = document.getElementById('gpuSelect').value;
+      const vramSelect = document.getElementById('vramSelect');
+      const vramLabel = document.getElementById('vramLabel');
+      
+      const options = GPU_MODELS[gpu] || [];
+      vramSelect.innerHTML = '';
+      
+      options.forEach(item => {
+        const opt = document.createElement('option');
+        opt.value = item.value;
+        opt.textContent = item.label;
+        vramSelect.appendChild(opt);
+      });
+
+      // 动态更新文案标签
+      if (gpu === 'mac') {
+        vramLabel.textContent = '对应 Apple M 芯片规格 (统一显存池)';
+      } else if (gpu === 'cpu') {
+        vramLabel.textContent = '核显与处理器规格';
+      } else {
+        vramLabel.textContent = '对应型号系列与独立显存';
+      }
+
+      triggerUpdate();
+    }
+
+    // 严苛评估计算引擎
+    function triggerUpdate() {
+      const gpu = document.getElementById('gpuSelect').value;
+      const vramVal = document.getElementById('vramSelect').value;
+      const ram = parseInt(document.getElementById('ramSelect').value);
+      
+      let effectiveVram = 0;
+      if (gpu === 'mac') {
+        if (vramVal === 'mac_standard') effectiveVram = Math.max(0, ram - 5);
+        else if (vramVal === 'mac_pro') effectiveVram = Math.max(16, ram - 8);
+        else effectiveVram = Math.max(48, ram - 12);
+      } else if (gpu === 'cpu') {
+        effectiveVram = 0;
+      } else {
+        effectiveVram = parseInt(vramVal);
+      }
+
+      let score = 50;
+      let badge = '';
+      let badgeClass = '';
+      let tag = '';
+      let title = '';
+      let desc = '';
+      let mVram = '';
+      let mSpeed = '';
+      let mTemp = '';
+      let mOffline = '';
+      let tool = '';
+      let toolSub = '';
+      let model = '';
+      let modelSub = '';
+      let riskTitle = '';
+      let tip = '';
+      let isSevere = false;
+      let alt = '';
+
+      /* ----------------------------------------------------
+         1. 绘画与生图场景 (SD / Flux)
+      ---------------------------------------------------- */
+      if (activeIntent === 'draw') {
+        if (gpu === 'cpu' || effectiveVram === 0) {
+          score = 5;
+          badge = '死机/严重卡顿风险 (5%)';
+          badgeClass = 'bg-rose-50 text-rose-700 border-rose-200';
+          tag = 'CRITICAL · 绝无可用性';
+          title = '纯 CPU 渲染图像单张耗时超 15 分钟';
+          desc = 'SD 底模依靠庞大的矩阵乘法，CPU 既缺乏并行浮点单元又受制于内存带宽。单张 512 图需漫长等待，分辨率稍大直接崩溃。';
+          mVram = '内存暴溢';
+          mSpeed = '< 0.04 it/s';
+          mTemp = 'CPU 满载发烫';
+          mOffline = '不可用';
+          tool = '云端在线绘图工作台';
+          toolSub = '免去下载 20G 环境及烧坏轻薄本风险';
+          model = '云端全精度 SDXL / Flux.1';
+          modelSub = '直接调用专业算力集群';
+          riskTitle = '硬件受损风险';
+          tip = '切忌在没有独显的电脑上下载整合包尝试运行，极易因高负荷引起过热死机或掉电。';
+          isSevere = true;
+          alt = '哩布哩布 (LiblibAI) / 堆友 / 即梦 AI';
+
+        } else if (gpu === 'amd') {
+          score = effectiveVram >= 12 ? 55 : (effectiveVram >= 8 ? 40 : 20);
+          badge = effectiveVram >= 12 ? '勉强可用/算力折损 (55%)' : '兼容性极差 (30%)';
+          badgeClass = 'bg-amber-50 text-amber-700 border-amber-200';
+          tag = 'AMD RADEON · DIRECTML 局限';
+          title = 'A卡在 Windows 下效率折损严重，插件极易报错';
+          desc = '开源生态底层高度依赖 NVIDIA CUDA。Windows 下通过 DirectML 转译效率大约仅有同价位 N卡的 35%~50%，且大多 ControlNet 和换脸插件会闪退。';
+          mVram = effectiveVram >= 8 ? '利用率低下' : '严重紧缺';
+          mSpeed = '慢速 (1~2.5 it/s)';
+          mTemp = '正常发热';
+          mOffline = '折腾排错多';
+          tool = 'SD.Next (DirectML 专用分支)';
+          toolSub = '针对非 N卡开发，但版本更新滞后';
+          model = '仅推荐 SD 1.5 及其精简 LoRA';
+          modelSub = '禁止使用高负载 SDXL / Flux';
+          riskTitle = '排错门槛极高';
+          tip = '除非在 Linux 系统下部署原生 ROCm 驱动，否则在 Windows 上跑 A卡会耗费大量时间排查算子缺失报错。';
+          isSevere = true;
+          alt = '在线 AI 画图社区平台 (Tensor.art / Liblib)';
+
+        } else if (gpu === 'mac') {
+          if (vramVal === 'mac_standard' && ram <= 8) {
+            score = 28;
+            badge = '内存极度吃紧 (28%)';
+            badgeClass = 'bg-rose-50 text-rose-700 border-rose-200';
+            tag = 'APPLE M 8G · 无法画大图';
+            title = '8G 统一内存被 MacOS 占用大半，无法运行主流底模';
+            desc = 'MacOS 自身常驻 3.5G~4.5G，剩余给 GPU 调配的共享显存不足 3G。无法加载任何全量 SDXL 或 Flux，仅能跑经过深度精简的 LCM 玩具模型。';
+            mVram = '98% 满载';
+            mSpeed = '慢速 (30~50秒)';
+            mTemp = '轻度温热';
+            mOffline = '仅微型图';
+            tool = 'Draw Things (App Store 免费)';
+            toolSub = '必须限制步数在 8~12 步';
+            model = 'LCM (低步数模型) / SD 1.5 剪裁版';
+            modelSub = '细节模糊，容易出现涂抹感';
+            riskTitle = '系统死锁提醒';
+            tip = '生成过程中千万不要同时开浏览器或多任务，否则极易直接触发 MacOS 紫屏或强制注销。';
+            isSevere = true;
+            alt = 'Midjourney 或 网页版生图平台';
+          } else if (vramVal === 'mac_ultra' || ram >= 48) {
+            score = 92;
+            badge = '超大显存霸王 (92%)';
+            badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+            tag = 'APPLE M ULTRA · 巨量显存';
+            title = '大显存容量天花板：超大尺寸模型随意装填，稳定性极高';
+            desc = '拥有超过 40G 的可用共享显存，能够轻松加载 24GB 原尺寸的 Flux.1-dev，适合追求单张极致艺术细节但对速度不极度苛求的创作者。';
+            mVram = '显存超大裕量';
+            mSpeed = '稳健 (约 12~20秒/张)';
+            mTemp = '静音工作';
+            mOffline = '顶级离线创作';
+            tool = 'ComfyUI (Mac MPS 加速分支)';
+            toolSub = '支持搭建高清专业插画工作流';
+            model = 'Flux.1-dev / SD 3.5 Large / SDXL 全系';
+            modelSub = '支持生成海报级超清图';
+            riskTitle = '张量加速局限';
+            tip = '虽然显存巨大，但苹果 MPS 目前不支持多卡并行与 FP8 极速加速，单张极限速度仍低于台式 4090。';
+            alt = '本地已足够优秀';
+          } else {
+            score = 78;
+            badge = '出图较慢但稳定 (78%)';
+            badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+            tag = 'APPLE METAL · 统一内存机制';
+            title = 'Mac M系列：不爆显存，出图耗时约同价位 N卡的 2~3 倍';
+            desc = '借助统一显存寻址，画 1024 尺寸大图不会出现 OOM 崩溃，但缺少专用的 Tensor Core 矩阵核心，单张出图需 15~35 秒。';
+            mVram = '调度平稳';
+            mSpeed = '中速 (约 18~35秒/张)';
+            mTemp = '安静温热';
+            mOffline = '原生支持';
+            tool = 'Draw Things 或 DiffusionBee';
+            toolSub = '针对 Apple 芯片深度优化';
+            model = 'SDXL 紧凑版 / Flux Schnell GGUF-Q4';
+            modelSub = '1024 分辨率成图精美';
+            riskTitle = '供电与功耗';
+            tip = 'MacBook 在连续绘图时必须插上电源适配器，电池供电会自动将 GPU 频率限制在 60% 以下。';
+            alt = '哩布哩布 (LiblibAI) 网页版';
+          }
+
+        } else {
+          // NVIDIA 独立显卡
+          if (effectiveVram <= 4) {
+            score = 35;
+            badge = '淘汰边缘 (35%)';
+            badgeClass = 'bg-rose-50 text-rose-700 border-rose-200';
+            tag = 'GTX 4G · 严重落伍';
+            title = '4G 显存已被现代生图模型全线淘汰';
+            desc = '任何 SDXL、SD 3.5 或 Flux 都需要至少 6G~8G 显存。4G 显卡强行开启会爆显存崩溃，若借用内存速度会雪崩。';
+            mVram = '99% 濒临崩溃';
+            mSpeed = '极慢 (20秒+ / 512图)';
+            mTemp = '风扇啸叫';
+            mOffline = '严重残缺';
+            tool = '秋叶整合包 (强制开启 --lowvram)';
+            toolSub = '通过降低运算精度勉强启动';
+            model = '仅限 2022 年老旧 SD 1.5 基础版';
+            modelSub = '严禁开启 1024 分辨率直出';
+            riskTitle = '红线警报';
+            tip = '严禁勾选高清修复 (Hi-Res Fix) 与任何 Flux 插件，100% 触发 CUDA Out of Memory 报错中断。';
+            isSevere = true;
+            alt = '哩布哩布 (LiblibAI)';
+
+          } else if (effectiveVram <= 6) {
+            score = 65;
+            badge = '仅限标清生图 (65%)';
+            badgeClass = 'bg-amber-50 text-amber-700 border-amber-200';
+            tag = 'RTX 6G · 紧凑入门';
+            title = '6G 显存：流畅运行 SD 1.5，运行 SDXL 较勉强';
+            desc = '可极快出 512x512 尺寸图，但在开启 SDXL 或多层 ControlNet 时显存非常吃紧，无法体验最新一代大底模。';
+            mVram = '85%~92%';
+            mSpeed = '较快 (4~8秒)';
+            mTemp = '正常高转速';
+            mOffline = '标清顺畅';
+            tool = '秋叶整合包 / ComfyUI';
+            toolSub = '需开启 xFormers 显存优化参数';
+            model = 'SD 1.5 及其成熟 LoRA';
+            modelSub = '适合日常画风尝试';
+            riskTitle = '底模尺寸警报';
+            tip = '不要下载超过 6GB 的大体积 Checkpoint 权重文件，极易中途退出。';
+            alt = 'Tensor.art';
+
+          } else if (effectiveVram <= 8) {
+            score = 82;
+            badge = '甜点日常款 (82%)';
+            badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+            tag = 'RTX 8G · 主流基准卡';
+            title = '8G 显存：玩转 SD 1.5/SDXL，运行 Flux 需精打细算';
+            desc = '目前最通用的本地画图配置。跑 SD 1.5 极快（2~4秒）；跑 SDXL 约 6~9 秒；想体验最新的 Flux 必须使用 NF4 深度压缩版，否则瞬间爆显存。';
+            mVram = '合理满载 (75%~90%)';
+            mSpeed = '飞快 (3~7秒/张)';
+            mTemp = '高转速';
+            mOffline = '主流标杆';
+            tool = 'ComfyUI (首选) 或 秋叶整合包';
+            toolSub = 'ComfyUI 针对 8G 显存的回收机制更优';
+            model = 'Flux.1-schnell-NF4 或 SDXL 基础版';
+            modelSub = '1024x1024 标准高清图';
+            riskTitle = '真实避坑';
+            tip = '切勿下载 24GB 原版 FP16 的 Flux 或 SD3.5 模型，8G 显存无法容纳，必须严格下载 GGUF-Q4 或 NF4 格式。';
+            alt = 'Tensor.art 或 哩布哩布';
+
+          } else if (effectiveVram <= 12) {
+            score = 90;
+            badge = '高性价比档 (90%)';
+            badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+            tag = 'RTX 12G · 宽松进阶';
+            title = '12G 显存：通吃全系 SDXL，畅快体验 Flux 量化版';
+            desc = '12G（如 RTX 3060 12G、4070）拥有充裕缓冲空间，可同时加载 ControlNet、FaceID 换脸插件和多层 LoRA，几乎遇不到显存崩溃。';
+            mVram = '舒适运行 (~70%)';
+            mSpeed = '极快 (3~5秒/张)';
+            mTemp = '正常温控';
+            mOffline = '完全自主';
+            tool = 'ComfyUI 进阶工作流';
+            toolSub = '支持多阶段高清修复与扩图';
+            model = 'Flux.1-dev Q4_K_S / SDXL 官方全量底模';
+            modelSub = '画面层次感丰富，无虚焦涂抹';
+            riskTitle = '建议指南';
+            tip = '生成批量大图时建议把显存保留 1.5G 裕量，避免由于系统桌面渲染抢占导致突发 OOM。';
+            alt = '本地已极其顺手';
+
+          } else if (effectiveVram <= 16) {
+            score = 96;
+            badge = '准专业创作者 (96%)';
+            badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+            tag = 'RTX 16G · 自由创作';
+            title = '16G 满血显存：畅玩原精度生图与个人画风 LoRA 微调训练';
+            desc = '16G 显存（如 RTX 4080、4070Ti Super）跨入专业创作者门槛，不仅生图无需妥协画质，还可以在本地开启 Kohya_ss 训练属于自己的角色模型。';
+            mVram = '极为从容 (< 60%)';
+            mSpeed = '电光石火 (1~3秒/张)';
+            mTemp = '良好';
+            mOffline = '自由无约束';
+            tool = 'ComfyUI 专业节点流 / Kohya_ss 炼丹炉';
+            toolSub = '支持图生图、超分放大与画风微调训练';
+            model = 'Flux.1 全量版 / SDXL 满血版 / SD 3.5';
+            modelSub = '电影级细节拉满';
+            riskTitle = '存储提醒';
+            tip = '各种高清底模与训练集非常吃硬盘，务必准备至少 200GB 高速固态硬盘分区。';
+            alt = '无需任何云端平替';
+
+          } else {
+            // 24G 满血
+            score = 99;
+            badge = '工业旗舰天花板 (99%)';
+            badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+            tag = 'RTX 24G · 顶配自由';
+            title = '24G 满血（3090/4090）：消费级终极生图与模型研发工作站';
+            desc = '生图领域无可挑剔的天花板。多模型常驻显存毫秒切换，超大批次批量出图，本地商业级 LoRA 训练随心所欲。';
+            mVram = '极其充沛 (< 45%)';
+            mSpeed = '瞬秒直出 (< 1.5秒)';
+            mTemp = '显卡散热扎实';
+            mOffline = '完全自主';
+            tool = 'ComfyUI 企业级矩阵流 / Forge';
+            toolSub = '支持实时交互式生图 (Realtime Latent)';
+            model = 'Flux.1 原始无损 FP16 / 大型多模态';
+            modelSub = '商业商用级工业精度';
+            riskTitle = '硬件功耗要点';
+            tip = '整机峰值功耗较大，确保电源额定在 850W 以上以防瞬时尖峰断电保护。';
+            alt = '本地已登顶，无须任何平替';
+          }
+        }
+
+      /* ----------------------------------------------------
+         2. 对话与本地知识库 (LLM / RAG)
+      ---------------------------------------------------- */
+      } else if (activeIntent === 'chat' || activeIntent === 'kb') {
+        if (ram <= 8 && effectiveVram <= 0) {
+          score = 25;
+          badge = '体验较差/仅限玩具级 (25%)';
+          badgeClass = 'bg-rose-50 text-rose-700 border-rose-200';
+          tag = '8G RAM · 严重局限';
+          title = '仅能运行 1.5B 玩具级模型，逻辑与推理严重受限';
+          desc = '现代操作系统基础占用 3.5G 内存，仅剩约 3G 分配给模型。跑不了任何主流大模型，1.5B 模型处理复杂逻辑或长文档时答非所问、胡言乱语。';
+          mVram = '无独显加速';
+          mSpeed = '迟钝 (6~12字/秒)';
+          mTemp = '低';
+          mOffline = '仅短文本';
+          tool = 'Ollama (纯CPU模式)';
+          toolSub = '仅限体验极轻量命令行服务';
+          model = 'Qwen2.5-1.5B-Instruct-Q4';
+          modelSub = '模型智商较低，仅适合短句改写';
+          riskTitle = '严重幻觉与短上下文';
+          tip = '切勿导入超过 10 页的长文档做知识库问答，内存会瞬间爆掉并引起系统死锁。';
+          isSevere = true;
+          alt = 'DeepSeek 网页版 / Kimi 智能助手 (完全免费且顶尖智商)';
+
+        } else if (effectiveVram >= 16 || (gpu === 'mac' && (vramVal === 'mac_pro' || vramVal === 'mac_ultra' || ram >= 32))) {
+          score = 98;
+          badge = '大参数模型自由 (98%)';
+          badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+          tag = '14B~32B · 高阶大智力';
+          title = '进阶工作站：本地常驻 14B~32B 深度思考大模型';
+          desc = '能够轻松运行 14B 参数级别甚至 32B 量化模型（如 DeepSeek-R1 蒸馏版）。具备极强的代码架构能力、长篇逻辑推导与专业论文分析能力，断网也是超级大脑。';
+          mVram = '12G~20G 宽裕调度';
+          mSpeed = '极快 (40~85字/秒)';
+          mTemp = '平稳可控';
+          mOffline = '企业级私密助手';
+          tool = 'Ollama + Dify (本地个人版) / Open-WebUI';
+          toolSub = '构建专属多代理 Agent 与深度知识库';
+          model = 'Qwen2.5-14B / DeepSeek-R1-Distill-Qwen-14B/32B';
+          modelSub = '接近云端旗舰大模型的智力水平';
+          riskTitle = '专业建议';
+          tip = '运行 32B 深度思考模型时，需保证系统物理内存在 32G 以上以承载 32k 上下文空间。';
+          alt = '本地已超越绝大多数商业收费模型';
+
+        } else if ((effectiveVram >= 8 && effectiveVram < 16) || (gpu === 'mac' && ram >= 16)) {
+          score = 88;
+          badge = '极佳主力离线档 (88%)';
+          badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+          tag = '7B/8B 黄金标准';
+          title = '完整装填 7B~8B 大模型：速度飞快，中文智商扎实';
+          desc = '7B~8B 模型（如 Qwen2.5-7B、Llama 3.1-8B）可全量载入显存或极速统一内存，生成速度远超人眼阅读速度，逻辑清晰、文档问答精准。';
+          mVram = '占用约 6G~7.5G';
+          mSpeed = '极快 (35~60字/秒)';
+          mTemp = '轻度温热';
+          mOffline = '完全离线私密';
+          tool = 'Ollama + Cherry Studio (或 Chatbox)';
+          toolSub = '支持知识库向量库集成与多模型对比';
+          model = 'Qwen2.5-7B-Instruct / DeepSeek-R1-Distill-Qwen-7B';
+          modelSub = '推理逻辑缜密，长文结构完整';
+          riskTitle = '知识库嵌入选型';
+          tip = '本地知识库 Embedding 向量模型务必搭配 bge-small-zh 或 bge-large-zh，检索精度最高。';
+          alt = 'DeepSeek 官方 App';
+
+        } else {
+          score = 72;
+          badge = '轻量可用 (72%)';
+          badgeClass = 'bg-amber-50 text-amber-700 border-amber-200';
+          tag = '适合 3B~7B';
+          title = '主流配置平衡点：流畅运行 3B 模型，极限运行 7B Q4';
+          desc = '可以稳定使用 3B 尺寸的高压缩模型（如 Qwen-3B），打字流畅；如果要运行业界标准的 7B 模型，必须使用 Q4_K_M 压缩格式，且历史记录不宜过长。';
+          mVram = 'CPU/显存混合负载';
+          mSpeed = '较流畅 (16~25字/秒)';
+          mTemp = '微温';
+          mOffline = '日常够用';
+          tool = 'Ollama + Chatbox 客户端';
+          toolSub = '图形化窗口管理，打字体感清爽';
+          model = 'Qwen2.5-3B-Instruct 或 Qwen2.5-7B-Q4';
+          modelSub = '中文表达自然，适合日常总结和润色';
+          riskTitle = '长上下文警报';
+          tip = '做文档知识库 (RAG) 时，切忌一次性塞入几十本 PDF，向量检索消耗过大容易挤占打字内存。';
+          alt = '通义千问 / 豆包网页端';
+        }
+
+      /* ----------------------------------------------------
+         3. 辅助编程与智能体 (Code)
+      ---------------------------------------------------- */
+      } else if (activeIntent === 'code') {
+        if (effectiveVram <= 0 && ram <= 8) {
+          score = 50;
+          badge = '仅适轻量单行补全 (50%)';
+          badgeClass = 'bg-amber-50 text-amber-700 border-amber-200';
+          tag = 'BASIC COPILOT';
+          title = '硬件受限，只能进行基本的短单行代码提示';
+          desc = '本地硬件难以支撑庞大的代码理解模型，处理复杂函数时常常因为内存吞吐慢而产生打字卡顿感。';
+          mVram = '无';
+          mSpeed = '约 8~12字/秒';
+          mTemp = '低';
+          mOffline = '基础补全';
+          tool = 'VS Code + Continue 插件 (绑定小模型)';
+          toolSub = '小巧的编辑器辅助';
+          model = 'Qwen2.5-Coder-1.5B-Q4';
+          modelSub = '单行补全尚可，整段逻辑较弱';
+          riskTitle = '逻辑漏洞警告';
+          tip = '切忌让小模型重构核心架构，其容易遗漏语法边界导致难以排查的 Bug。';
+          alt = '直接使用 Cursor 免费方案 或 接入 DeepSeek API';
+        } else {
+          score = 96;
+          badge = '敏捷高效黄金搭配 (96%)';
+          badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+          tag = 'HYBRID COPILOT · 极致体验';
+          title = '现代程序员标配：本地瞬时补全 + 远端大模型架构排错';
+          desc = '你的硬件能极其流畅地在本地运行 1.5B/7B 代码专用模型做键盘敲击时的实时毫秒级补全；遇到复杂工程问题随时调用云端顶级模型（如 DeepSeek-V3）。';
+          mVram = '极低负担 (2G~5G)';
+          mSpeed = '毫秒级打字回显';
+          mTemp = '清凉无感';
+          mOffline = '离线敲代码无忧';
+          tool = 'Cursor 编辑器 或 VS Code + Continue 插件';
+          toolSub = '全套现代结对编程环境';
+          model = '本地 Qwen2.5-Coder-7B + 远端 DeepSeek-Coder-V3';
+          modelSub = '兼顾毫秒响应与顶级算法智商';
+          riskTitle = '实用提示';
+          tip = '在编辑器里使用自然语言向它陈述代码需求时，尽量把函数输入输出规范描述清楚。';
+          alt = 'Cursor 免费计划';
+        }
+
+      /* ----------------------------------------------------
+         4. 声音克隆与音乐生成 (Audio)
+      ---------------------------------------------------- */
+      } else if (activeIntent === 'audio') {
+        if (gpu === 'cpu' || effectiveVram <= 0) {
+          score = 52;
+          badge = '仅适合合成/无法训练 (52%)';
+          badgeClass = 'bg-amber-50 text-amber-700 border-amber-200';
+          tag = 'CPU AUDIO · 推理尚可';
+          title = '纯 CPU 可完成语音播放合成，但无法训练专属声音';
+          desc = '加载现成的音色模型朗读文本较为流畅，但若要录制自己的声音进行微调训练，CPU 计算梯度极其缓慢且容易发热降频。';
+          mVram = '无';
+          mSpeed = '中速 (约 1:1 朗读速度)';
+          mTemp = '中度发热';
+          mOffline = '仅播放合成';
+          tool = 'ChatTTS / Edge-TTS (本地直调)';
+          toolSub = '轻巧自然的日常配音朗读器';
+          model = 'ChatTTS 预训练音色底模';
+          modelSub = '自带拟真叹气、笑声等细微情绪';
+          riskTitle = '训练限制';
+          tip = '如果想把自己的声音做成音色模型，建议将训练步骤交给云端平台完成，生成后的模型再放回本地运行。';
+          alt = 'Fish Audio 网页版 / 剪映文本朗读';
+
+        } else if (gpu === 'nvidia' && effectiveVram >= 6) {
+          score = 94;
+          badge = '极佳音频实验室 (94%)';
+          badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+          tag = 'VOICE READY · 训练顺畅';
+          title = '5秒干净素材即可克隆音色，本地全流程自研';
+          desc = '声音合成对算力要求温和，你的设备不仅能在 0.2 秒内合成一句话，还能在 15 分钟内微调出自己的专属高保真音色模型。';
+          mVram = '约 3.5G~5.5G 适中';
+          mSpeed = '实时率 0.15 (秒级成片)';
+          mTemp = '平稳正常';
+          mOffline = '全离线制作';
+          tool = 'GPT-SoVITS 开源整合包 (B站开源神作)';
+          toolSub = '国内目前情感最细腻、拟真度最高的开源音频神器';
+          model = 'GPT-SoVITS-v2 中英日全语种底模';
+          modelSub = '跨语种拟真克隆，完全保留个人音调声线';
+          riskTitle = '采音关键';
+          tip = '参考音频务必用清晰安静的麦克风录制，严禁携带背景杂音或伴奏音乐，否则电音杂质会被模型一同学习。';
+          alt = '剪映内置朗读功能';
+
+        } else {
+          score = 78;
+          badge = '良好可用 (78%)';
+          badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+          tag = 'MAC/LOW-VRAM · 表现平稳';
+          title = '声音合成与小样本微调均可在合理时间内完成';
+          desc = 'Mac 或 4G 显卡可以流畅进行声音推理，微调一个音色约需 25~40 分钟，足够制作个性化有声书与视频旁白。';
+          mVram = '4G 刚好满载';
+          mSpeed = '良好';
+          mTemp = '温和';
+          mOffline = '完全支持';
+          tool = 'GPT-SoVITS (MPS 或 CPU加速分支)';
+          toolSub = '界面友好，傻瓜化配置';
+          model = 'GPT-SoVITS-v2 预训练模型';
+          modelSub = '自然生动，口语感强';
+          riskTitle = '音频切片注意';
+          tip = '单段训练素材长度控制在 3~9 秒最佳，过长的音频容易引起显存突增。';
+          alt = 'Fish Audio 网页版';
+        }
+
+      /* ----------------------------------------------------
+         5. 短视频与动图生成 (Video)
+      ---------------------------------------------------- */
+      } else {
+        if (effectiveVram >= 24 && gpu === 'nvidia') {
+          score = 92;
+          badge = '顶配满血视频工作站 (92%)';
+          badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+          tag = 'RTX 24G · 工业级视频创作';
+          title = '24G 旗舰显存：本地畅跑主流开源视频大模型';
+          desc = '消费级硬件最高天花板（RTX 3090/4090）。配合充裕内存，无需激进降画质即可全显存常驻运行最新开源文生视频与首尾帧图生视频。';
+          mVram = '约 18G~22G (充裕)';
+          mSpeed = '主流 (约 2~4分钟/5秒成片)';
+          mTemp = '高功耗满载 (70℃~78℃)';
+          mOffline = '专业离线渲染';
+          tool = 'ComfyUI 视频工作流 / Wan2.1 / LTX-Video';
+          toolSub = '支持动态运镜、首尾帧控制与升频插帧';
+          model = 'Wan2.1-14B / HunyuanVideo / LTX-Video-0.9';
+          modelSub = '具备电影级物理真实质感与复杂运镜';
+          riskTitle = '工作站供电与散热';
+          tip = '连续多批次跑视频时确保机箱进风顺畅，电源额定功率需在 850W 以上防止瞬时尖峰断电。';
+          alt = '本地已是天花板，云端仅作补充备选';
+
+        } else if (effectiveVram >= 16 && gpu === 'nvidia') {
+          score = 72;
+          badge = '极重负荷/仅限量化版 (72%)';
+          badgeClass = 'bg-amber-50 text-amber-700 border-amber-200';
+          tag = 'RTX 16G · 紧绷尝鲜门槛';
+          title = '16G 显存：必须配合 GGUF 量化与分步内存卸载运行';
+          desc = '刚刚摸到本地跑视频的及格线。原版 14B 视频模型必定爆显存，必须借助 4bit/8bit 量化与 CPU 内存搬运技术，渲染一段 5 秒短视频约耗时 6~12 分钟。';
+          mVram = '92%~96% 极度吃紧';
+          mSpeed = '缓慢 (6~12分钟/5秒视频)';
+          mTemp = '显卡满载发热';
+          mOffline = '可用(需妥协画质)';
+          tool = 'ComfyUI 专用低显存视频工作流';
+          toolSub = '必须开启 T5 文本编码器分步卸载 (Offload)';
+          model = 'Wan2.1-1.3B / CogVideoX-2B-Int8 / LTX-Video';
+          modelSub = '720P 短镜头运镜';
+          riskTitle = '防崩溃守则';
+          tip = '渲染视频期间严禁在电脑后台开 3D 游戏或视频剪辑，轻微的显存抢占就会导致长达十分钟的渲染中途报错报废。';
+          alt = '快手可灵 AI / MiniMax 海螺 / 智谱清影';
+
+        } else if (gpu === 'mac' && (vramVal === 'mac_pro' || vramVal === 'mac_ultra' || ram >= 32)) {
+          score = 65;
+          badge = '显存大但速度极慢 (65%)';
+          badgeClass = 'bg-amber-50 text-amber-700 border-amber-200';
+          tag = 'MAC 32G+ · 静音慢炖';
+          title = '显存容量能够塞进模型，但算力核心缺乏原生张量加速';
+          desc = 'Mac 的统一大内存能轻松容纳大体积视频底模而不崩溃，但缺少专用的 Tensor 单元，生成 5 秒视频通常需要静止等待 15~30 分钟。';
+          mVram = '共享内存占用高';
+          mSpeed = '极慢 (15~30分钟/段)';
+          mTemp = '安静温热';
+          mOffline = '可行但耗时长';
+          tool = 'ComfyUI (MPS Mac 分支)';
+          toolSub = '依靠纯内存吞吐换取可用性';
+          model = 'LTX-Video / CogVideoX 量化版';
+          modelSub = '短视频生成';
+          riskTitle = '时间成本高昂';
+          tip = 'MacBook 生成视频请务必关闭自动休眠，息屏休眠会导致渲染进程被系统冻结挂起。';
+          alt = '直接使用网页端商业视频平台';
+
+        } else {
+          score = 5;
+          badge = '硬件完全不达标 (5%)';
+          badgeClass = 'bg-rose-50 text-rose-700 border-rose-200';
+          tag = 'IMPOSSIBLE · 绝不可行';
+          title = '当前显存容量严重不足，无法承受本地视频渲染';
+          desc = '本地生成视频需要同时存储数百帧的时空注意力矩阵，12G 及以下显卡在载入模型的刹那即会遭遇 CUDA OOM 瞬间崩溃，完全无法运行。';
+          mVram = '严重不足';
+          mSpeed = '无法运行';
+          mTemp = '--';
+          mOffline = '不支持';
+          tool = '直接使用云端生成平台';
+          toolSub = '由数百张 H100/4090 专业算力服务器集群生成';
+          model = '商业级 Kling-1.5 / Runway Gen-3 / Sora';
+          modelSub = '电影级运镜与真实物理规律';
+          riskTitle = '严防虚假宣传';
+          tip = '市面上任何声称“轻薄本或老旧电脑能 10 秒跑出高清 AI 视频”的均为欺诈性捆绑软件，强行折腾只会徒增硬件老化。';
+          isSevere = true;
+          alt = '快手可灵 AI (每日免费送灵感值) / 海螺 AI';
+        }
+      }
+
+      // DOM 瞬间注入
+      document.getElementById('resScore').innerText = `可行性: ${score}%`;
+      document.getElementById('resBadge').innerText = badge;
+      document.getElementById('resBadge').className = `px-2.5 py-0.5 rounded-md text-[11px] font-bold border ${badgeClass}`;
+      document.getElementById('resTag').innerText = tag;
+      document.getElementById('resTitle').innerText = title;
+      document.getElementById('resDesc').innerText = desc;
+      
+      document.getElementById('metricVram').innerText = mVram;
+      document.getElementById('metricSpeed').innerText = mSpeed;
+      document.getElementById('metricTemp').innerText = mTemp;
+      document.getElementById('metricOffline').innerText = mOffline;
+
+      document.getElementById('resTool').innerText = tool;
+      document.getElementById('resToolSub').innerText = toolSub;
+      document.getElementById('resModel').innerText = model;
+      document.getElementById('resModelSub').innerText = modelSub;
+
+      // 风险警报样式自适应
+      const riskBox = document.getElementById('riskContainer');
+      const riskIcon = document.getElementById('riskIcon');
+      const riskTitleDom = document.getElementById('riskTitle');
+      
+      if (isSevere) {
+        riskBox.className = 'p-3.5 rounded-2xl text-xs flex items-start gap-2.5 bg-rose-50/80 border border-rose-200/60 text-rose-900';
+        riskIcon.innerText = '🚨';
+        riskTitleDom.className = 'font-bold text-[11px] text-rose-900';
+      } else {
+        riskBox.className = 'p-3.5 rounded-2xl text-xs flex items-start gap-2.5 bg-amber-50/80 border border-amber-200/50 text-amber-900';
+        riskIcon.innerText = '💡';
+        riskTitleDom.className = 'font-bold text-[11px] text-amber-900';
+      }
+
+      riskTitleDom.innerText = riskTitle;
+      document.getElementById('resTip').innerText = tip;
+      document.getElementById('resAlt').innerText = alt;
+    }
+
+    // 页面初始化完成时加载选项并计算
+    window.onload = () => {
+      onGpuChange();
+    };
+  </script>
+</body>
+</html>

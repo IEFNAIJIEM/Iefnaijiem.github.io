@@ -130,8 +130,26 @@
 
     </div>
 
-    <!-- 链接列表 (可自由点击与添加) -->
+    <!-- 链接列表 (包含个人作品【AI 意向评估器】及各平台直达) -->
     <div class="space-y-3">
+
+      <!-- 焦点推荐：AI 意向评估器 -->
+      <a href="ai-evaluator.html" 
+         class="link-item glass-card rounded-2xl p-4 flex items-center justify-between group border-indigo-400/60 dark:border-indigo-500/50 hover:border-indigo-600 shadow-sm relative overflow-hidden">
+        <div class="absolute -right-4 -bottom-4 w-16 h-16 bg-indigo-500/10 rounded-full blur-xl pointer-events-none"></div>
+        <div class="flex items-center gap-3.5">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-purple-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+            <i data-lucide="cpu" class="w-5 h-5"></i>
+          </div>
+          <div class="text-left">
+            <div class="font-bold text-sm text-slate-900 dark:text-white">
+              AI 意向评估器
+            </div>
+            <div class="text-xs text-indigo-600 dark:text-indigo-400 font-medium mt-0.5">输入硬件与目标 · 严苛算力诊断</div>
+          </div>
+        </div>
+        <i data-lucide="arrow-up-right" class="w-4 h-4 text-indigo-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all"></i>
+      </a>
       
       <!-- 链接 1: GitHub -->
       <a href="https://github.com/IEFNAIJIEM" target="_blank" rel="noopener noreferrer" 
@@ -148,34 +166,36 @@
         <i data-lucide="arrow-up-right" class="w-4 h-4 text-slate-400 group-hover:text-slate-800 dark:group-hover:text-white group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all"></i>
       </a>
 
-      <!-- 链接 2: 哔哩哔哩 (摄影 & 音乐动态) -->
-      <a href="https://space.bilibili.com" target="_blank" rel="noopener noreferrer" 
-         class="link-item glass-card rounded-2xl p-4 flex items-center justify-between group hover:border-pink-500">
+      <!-- 链接 2: 抖音 (替换了原 Bilibili) -->
+      <a href="https://www.douyin.com" target="_blank" rel="noopener noreferrer" 
+         class="link-item glass-card rounded-2xl p-4 flex items-center justify-between group hover:border-zinc-900 dark:hover:border-zinc-300">
         <div class="flex items-center gap-3.5">
-          <div class="w-10 h-10 rounded-xl bg-[#fb7299] text-white flex items-center justify-center shrink-0">
-            <i data-lucide="tv" class="w-5 h-5"></i>
+          <div class="w-10 h-10 rounded-xl bg-black text-white flex items-center justify-center shrink-0">
+            <!-- 抖音音乐符号图标 -->
+            <i data-lucide="music-2" class="w-5 h-5 text-cyan-400"></i>
           </div>
           <div class="text-left">
-            <div class="font-bold text-sm text-slate-800 dark:text-slate-100">Bilibili</div>
-            <div class="text-xs text-slate-400">视频记录与日常</div>
+            <div class="font-bold text-sm text-slate-800 dark:text-slate-100">抖音</div>
+            <div class="text-xs text-slate-400">短视频日常与音乐分享</div>
           </div>
         </div>
-        <i data-lucide="arrow-up-right" class="w-4 h-4 text-slate-400 group-hover:text-pink-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all"></i>
+        <i data-lucide="arrow-up-right" class="w-4 h-4 text-slate-400 group-hover:text-black dark:group-hover:text-white group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all"></i>
       </a>
 
-      <!-- 链接 3: 个人博客 / 主页 -->
-      <a href="https://your-blog.com" target="_blank" rel="noopener noreferrer" 
-         class="link-item glass-card rounded-2xl p-4 flex items-center justify-between group hover:border-indigo-500">
+      <!-- 链接 3: 小红书 (替换了原 个人博客) -->
+      <a href="https://www.xiaohongshu.com" target="_blank" rel="noopener noreferrer" 
+         class="link-item glass-card rounded-2xl p-4 flex items-center justify-between group hover:border-red-500">
         <div class="flex items-center gap-3.5">
-          <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0">
-            <i data-lucide="compass" class="w-5 h-5"></i>
+          <div class="w-10 h-10 rounded-xl bg-[#ff2442] text-white flex items-center justify-center shrink-0">
+            <!-- 小红书书本/日常便签图标 -->
+            <i data-lucide="bookmark" class="w-5 h-5"></i>
           </div>
           <div class="text-left">
-            <div class="font-bold text-sm text-slate-800 dark:text-slate-100">个人博客 / 空间</div>
-            <div class="text-xs text-slate-400">文章随笔与记录</div>
+            <div class="font-bold text-sm text-slate-800 dark:text-slate-100">小红书</div>
+            <div class="text-xs text-slate-400">摄影图集与生活灵感笔记</div>
           </div>
         </div>
-        <i data-lucide="arrow-up-right" class="w-4 h-4 text-slate-400 group-hover:text-indigo-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all"></i>
+        <i data-lucide="arrow-up-right" class="w-4 h-4 text-slate-400 group-hover:text-red-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all"></i>
       </a>
 
       <!-- 链接 4: 邮箱联系 -->
@@ -192,23 +212,6 @@
         </div>
         <i data-lucide="arrow-up-right" class="w-4 h-4 text-slate-400 group-hover:text-emerald-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all"></i>
       </a>
-
-      <!-- 
-        ➕【想添加新链接？复制下面这段代码粘贴即可】：
-        <a href="你的链接地址" target="_blank" rel="noopener noreferrer" 
-           class="link-item glass-card rounded-2xl p-4 flex items-center justify-between group hover:border-indigo-500">
-          <div class="flex items-center gap-3.5">
-            <div class="w-10 h-10 rounded-xl bg-slate-800 text-white flex items-center justify-center shrink-0">
-              <i data-lucide="link" class="w-5 h-5"></i>
-            </div>
-            <div class="text-left">
-              <div class="font-bold text-sm text-slate-800 dark:text-slate-100">链接名称</div>
-              <div class="text-xs text-slate-400">副标题描述</div>
-            </div>
-          </div>
-          <i data-lucide="arrow-up-right" class="w-4 h-4 text-slate-400 group-hover:text-indigo-500 transition-all"></i>
-        </a>
-      -->
 
     </div>
 
